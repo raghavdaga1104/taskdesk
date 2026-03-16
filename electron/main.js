@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, globalShortcut } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const iconPath = path.join(__dirname, "../build/to-do.ico");
 
 let mainWindow;
 let tray;
@@ -13,14 +14,15 @@ const dataPath = path.join(app.getPath("userData"), "tasks.json");
 function createWindow() {
 
   mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 700,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
+  width: 1000,
+  height: 700,
+  icon: iconPath,
+  webPreferences: {
+    preload: path.join(__dirname, "preload.js"),
+    contextIsolation: true,
+    nodeIntegration: false
+  }
+});
 
   // Load React App
   if (isDev) {
@@ -29,7 +31,7 @@ function createWindow() {
     mainWindow.loadFile(path.join(app.getAppPath(), "dist", "index.html"));
   }
 
-  // Hide instead of closing
+  // Hide window instead of closing
   mainWindow.on("close", (event) => {
     if (!app.isQuiting) {
       event.preventDefault();
@@ -39,12 +41,15 @@ function createWindow() {
 
 }
 
+app.setAppUserModelId("com.taskdesk.app");
 app.whenReady().then(() => {
 
-  // Test notification
+  createWindow();
+
+  // 🔔 Test notification
   new Notification({
     title: "TaskDesk",
-    body: "Notification system working!"
+    body: "App is working!"
   }).show();
 
   // Auto start with Windows
@@ -54,10 +59,10 @@ app.whenReady().then(() => {
     });
   }
 
-  createWindow();
-
   // ⭐ GLOBAL SHORTCUT (Ctrl + Shift + T)
   globalShortcut.register("CommandOrControl+Shift+T", () => {
+
+    if (!mainWindow) return;
 
     if (mainWindow.isVisible()) {
       mainWindow.focus();
@@ -68,7 +73,7 @@ app.whenReady().then(() => {
   });
 
   // Tray icon
-  tray = new Tray(path.join(__dirname, "../public/icon.png"));
+  tray = new Tray(path.join(__dirname, "../public/to-do.png"));
 
   const contextMenu = Menu.buildFromTemplate([
     {
