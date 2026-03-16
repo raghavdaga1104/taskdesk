@@ -1,79 +1,105 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, Notification, globalShortcut } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const iconPath = path.join(__dirname, "../build/to-do.ico");
+
+// MUST be first - fixes notification sender name and taskbar identity
+app.setAppUserModelId("com.taskdesk.app");
 
 let mainWindow;
 let tray;
 
 const isDev = !app.isPackaged;
 
-// Path where tasks will be stored
+// Single instance lock
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+// Icon path - .ico for everything on Windows
+const iconPath = isDev
+  ? path.join(__dirname, "../build/to-do.ico")
+  : path.join(process.resourcesPath, "to-do.ico");
+
+// Task storage path
 const dataPath = path.join(app.getPath("userData"), "tasks.json");
 
 function createWindow() {
 
   mainWindow = new BrowserWindow({
-  width: 1000,
-  height: 700,
-  icon: iconPath,
-  webPreferences: {
-    preload: path.join(__dirname, "preload.js"),
-    contextIsolation: true,
-    nodeIntegration: false
-  }
-});
+    width: 1000,
+    height: 700,
+    icon: iconPath,
+    title: "TaskDesk",
+    show: false,
+    skipTaskbar: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
 
-  // Load React App
+  mainWindow.setIcon(iconPath);
+
+  // Show window when ready
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+    mainWindow.setIcon(iconPath);
+  });
+
+  // Load React app
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173");
   } else {
-    mainWindow.loadFile(path.join(app.getAppPath(), "dist", "index.html"));
+    mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
 
-  // Hide window instead of closing
+  // Hide instead of closing
   mainWindow.on("close", (event) => {
     if (!app.isQuiting) {
       event.preventDefault();
       mainWindow.hide();
+      mainWindow.setSkipTaskbar(false);
     }
   });
 
 }
 
-app.setAppUserModelId("com.taskdesk.app");
 app.whenReady().then(() => {
 
   createWindow();
 
-  // 🔔 Test notification
   new Notification({
     title: "TaskDesk",
-    body: "App is working!"
+    body: "App is working!",
+    icon: iconPath
   }).show();
 
-  // Auto start with Windows
+  // Auto start with Windows (production only)
   if (!isDev) {
-    app.setLoginItemSettings({
-      openAtLogin: true
-    });
+    app.setLoginItemSettings({ openAtLogin: true });
   }
 
-  // ⭐ GLOBAL SHORTCUT (Ctrl + Shift + T)
+  // Global shortcut
   globalShortcut.register("CommandOrControl+Shift+T", () => {
-
     if (!mainWindow) return;
-
     if (mainWindow.isVisible()) {
       mainWindow.focus();
     } else {
       mainWindow.show();
     }
-
   });
 
-  // Tray icon
-  tray = new Tray(path.join(__dirname, "../public/to-do.png"));
+  // System tray
+  tray = new Tray(iconPath);
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -98,32 +124,23 @@ app.whenReady().then(() => {
 
 });
 
-
-// Save tasks
 ipcMain.on("save-tasks", (event, tasks) => {
   fs.writeFileSync(dataPath, JSON.stringify(tasks, null, 2));
 });
 
-
-// Load tasks
 ipcMain.handle("load-tasks", () => {
   if (!fs.existsSync(dataPath)) return [];
   return JSON.parse(fs.readFileSync(dataPath));
 });
 
-
-// 🔔 Notification when task is added
 ipcMain.on("notify-task-added", (event, taskText) => {
-
   new Notification({
     title: "TaskDesk",
-    body: `New Task Added: ${taskText}`
+    body: `New Task Added: ${taskText}`,
+    icon: iconPath
   }).show();
-
 });
 
-
-// Clean up shortcuts when quitting
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
 });

@@ -4,18 +4,21 @@
   "description": "TaskDesk desktop task manager built with React, Vite, and Electron",
   "author": "Raghav Daga",
   "main": "electron/main.js",
+
   "scripts": {
     "dev": "vite",
     "electron": "electron .",
     "start": "concurrently \"npm run dev\" \"npm run electron\"",
     "build": "vite build",
-    "dist": "electron-builder"
+    "dist": "npm run build && electron-builder"
   },
+
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
+
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",
     "concurrently": "^9.2.1",
@@ -23,20 +26,39 @@
     "electron-builder": "^26.8.1",
     "vite": "^5.0.0"
   },
+
   "build": {
     "appId": "com.taskdesk.app",
     "productName": "TaskDesk",
+    "executableName": "TaskDesk",
+    "asar": true,
+
     "directories": {
       "output": "release"
     },
+
     "files": [
       "dist/**/*",
       "electron/**/*",
       "package.json"
     ],
+
+    "extraResources": [
+      {
+        "from": "build/to-do.ico",
+        "to": "to-do.ico"
+      }
+    ],
+
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
+
+    "icon": "build/to-do.ico",
+
     "win": {
       "target": "nsis",
-      "icon": "build/taskdesk.ico"
+      "icon": "build/to-do.ico"
     }
   }
 }
