@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="public/icon.png" alt="TaskDesk Logo" width="80" height="80" />
-
 # ⚡ TaskDesk
 
 **A fast, minimal desktop task manager built for productivity.**
